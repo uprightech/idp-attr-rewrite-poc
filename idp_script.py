@@ -34,6 +34,21 @@ class IdpExtension(IdpType):
             allowed_acrs_list_array = StringHelper.split(allowed_acrs, ",")
             self.allowedAcrsList = Arrays.asList(allowed_acrs_list_array)
 
+        self.sourceAttr = None
+        self.targetAttr = None
+
+        if configurationAttributes.containsKey("saml_source_attribute"):
+            self.sourceAttr = configurationAttributes.get("saml_source_attribute").getValue2()
+        
+        if configurationAttributes.containsKey("saml_target_attribute"):
+            self.targetAttr = configurationAttributes.get("saml_target_attribute").getValue2()
+
+        if self.sourceAttr is None or self.targetAttr is None:
+            print "Init Warning. Missing script configuration property: saml_source_attribute or saml_target_attribute"
+        else:
+            print "Idp extension. saml_source_attribute => %s , saml_target_attribute => %s" % (self.sourceAttr,self.targetAttr)
+        
+
         print "Idp extension. Initialization. The property allowed_acrs is %s" % self.allowedAcrsList
         
         return True
@@ -69,12 +84,15 @@ class IdpExtension(IdpType):
     #   configurationAttributes is java.util.Map<String, SimpleCustomProperty>
     def updateAttributes(self, context, configurationAttributes):
         print "Idp extension. Method: updateAttributes"
-        mailIdpValue = context.getIdpAttributeMap().get("mail")
-        if mailIdpValue is not None:
-            context.getIdpAttributeMap().remove("mail")
-            loginNameIdpValue = IdPAttribute("loginName")
-            loginNameIdpValue.setValues(mailIdpValue.getValues())
-            context.getIdpAttributeMap().put("loginName",loginNameIdpValue)
+        if self.sourceAttr is None or self.targetAttr is None:
+            return True 
+        sourceIdpAttr = context.getIdpAttributeMap().get(self.sourceAttr)
+        if sourceIdpAttr is not None:
+            context.getIdpAttributeMap().remove(self.sourceAttr)
+            targetIdpAttr = IdPAttribute(self.targetAttr)
+            targetIdpAttr.setValues(sourceIdpAttr.getValues())
+            context.getIdpAttributeMap().put(self.targetAttr,targetIdpAttr)
+        
         return True
 
     # Check before allowing user to log in
